@@ -1,10 +1,7 @@
-********************************************************************************
-*     Tema        : 3 - PC                                                     *
-*     Autor       : Andrei Ursache                                             *
-*     Grupa       : 322 CA                                                     *
-*     Data        : 1.05.2015                                                  *
-********************************************************************************
-    
+
+
+
+
 ********************************************************************************
     Aspecte generale:
 
@@ -156,19 +153,6 @@ adauga in istorie aceasta intrare.
             fisierele sursa.
 
 ********************************************************************************
-    Nota personala:
-    
-        De departe cea mai mare tema pe care am avut-o pana acum (1700 de 
-    linii). O tema foarte "practica", dar care a necesitat un efort destul de 
-    mare. Oricum, a meritat, pentru ca in final am reusit sa realizez toate
-    functionalitatile din enunt (parte cu primirea si transmiterea fisierelor
-    in timp ce clientul poate sa faca si altceva). Ca o observatie, nu cred ca 
-    se poate testa tema prin redirectarea unui fisier cu comenzi, ci trebuie 
-    introduse pe rand de la consola.
-    	Imi pare rau ca nu m-am incadrat in 80 de caractere la unele linii, dar
-    daca as fi facut asta ar fi fost greu de inteles codul.
-    	Daca intapinati vreo problema in timpul corectarii, va rog sa ma 
-    contactati: andreiursache94@gmail.com
     
     Andrei Ursache
 
