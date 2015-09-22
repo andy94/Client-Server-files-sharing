@@ -1,0 +1,174 @@
+********************************************************************************
+*     Tema        : 3 - PC                                                     *
+*     Autor       : Andrei Ursache                                             *
+*     Grupa       : 322 CA                                                     *
+*     Data        : 1.05.2015                                                  *
+********************************************************************************
+    
+********************************************************************************
+    Aspecte generale:
+
+    In realizarea temei am folosit socket stream (peste TCP) in C++ si am 
+utilizat laboaratoarele de PC (laboratorul de TCP si cel de multiplexare), 
+precum si notiunile teoretice prezentate in curs.
+    Am folosit apelul select si nu am creat fire de executie pentru 
+multiplexarea comunicatiei.
+    Limbajul folosit este C++.
+
+********************************************************************************
+    Ideea generala:
+    
+    Tema implementeaza atat serverul, cat si clientul. Primul este folosit doar
+pentru a stoca informatii referitoare la clientii conectati si fisierele pe care
+acestia le partajeaza. Clientii, folosesc serverul doar pentru a se "informa" cu
+privire la fisierele pe care le pot transfera de la alti clienti. O conexiune 
+pentru transferul unui fisier se face direct intre doi clienti (fara ca 
+serverul sa intervina), iar acestia pot primi / trimite pana la 3 fisiere 
+(pentru fiecare mod), timp in care ei pot da si alte comenzi.
+    Dupa apelarea "make" se creeaza doua executabile: "server" si "client" cu
+funcitonalitatile de mai sus.
+    Serverul primeste in linia de comanda portul pe care va astepta conexiuni
+din partea clientilor.
+    Clientul primeste in linia de comanda numele pe care doreste sa il aiba
+(acesta este unic), numele direcorului in care partajeaza fisiere, portul pe 
+care asteapta sa primeasca fisierele solicitate (care este fix, folosind bind)
+si informatiile legate de server (ip si port).
+    Sunt tratate si cazurile de eroare ce pot sa apara in comunicarea
+server - client si client - client.
+    Pe langa fisierele sursa ale celor doua entitati, mai exista un fisier,
+"aux.hpp" in care sunt definite clase specifice clientilor, fisierelor, precum 
+si alte funcii utilizate de program.
+    
+********************************************************************************
+    Structura  si implementare:
+
+        Server -----------------------------------------------------------------
+        
+    Cu ajutorul funcitei bind va "fixa" portul pe care asteapta conexiuni si 
+creeaza socketul corespunzator. Va seta in multimea de citire, pe langa acest 
+identificator al socketului si stdin pentru introducere comenzii de iesire.
+    Atat in cazul serverului, cat si in cel al clientului, multiplexarea se face 
+cu ajutorul functiei select, la fiecare iteratie a buclei while(1).
+    Serverul contine o lista de clienti conectati.
+    Dupa fiecare apel al functiei select, se itereaza printre identificatorii 
+descriptorilor setati:
+    In cazul socketului initial (de listen), daca este activ, inseamna ca 
+un nou client vrea sa se conecteze. Serverul primeste numele acestuia, si daca 
+nu il mai are deja ii raspunde afirmativ. Apoi clientul trimite si portul pe 
+care la randul lui asteapta conexiuni. Avand, aceste data, serverul adauga in
+lista sa noul client.
+    In cazul identificatorului 0, corespunzator stdin-ului, serverul verifica
+daca a fost introdusa comada "quit". In caz afirmativ, va trimite un mesaj de 
+iesire tuturor clientilor pe care ii are conectati.
+    In restul cazurilor, inseama ca este vorba de mesaje de comanda primite de
+la clienti. Daca funcita recv a intors o valoare mai mica decat 0 (si cu toate
+astea identificatorul a fost setat), inseamna ca acel client a iesit fortat din
+sistem si se trateaza si acest caz. In cazul in care mesajul a fost primit se 
+verifica ce comanda este (infoclients, share, getshare, unshare, quit) si pentru
+fiecare caz in parte, serverul alcatuieste raspunsul si il trimite clientului 
+care l-a solicitat.
+
+        Client -----------------------------------------------------------------
+        
+    Pentru client am creeat un fel de "consola" interactiva, 
+cu un aspect intuitiv. La fiecare introducere a unei comenzi, acesta verifica 
+daca este corecta si in caz negativ, il lasa pe utilizator sa o introduca din 
+nou. In acelasi timp, toate comenzile si raspunsurile lor sunt retunute si in
+fisierul de log.
+    Clientul creaza initial doi socketi: unul pentru comunicarea cu serverul si 
+unul pentru listen (pe un port fixat, cu funcita bind).
+    In cazul in care vreun pas in conectarea cu serverul esueaza, se intrerupe
+executia clientului afisandu-se un mesaj de eroare corespunzator.
+    Daca totul a decurs normal, clientul intra intr-o bucla infinita in care
+isi multiplexeaza intrarile cu functia select. Aici se utilizeaza si un timeout
+pentru a face stdin-ul non blocant. Daca nu as fi introdus un timeout, clientul
+nu putea sa trasfere / primeasca un fisier in mod continuu ci pe bucati, de 
+fiecare data cand se introducea o comanda.
+    In mod asemanator serverului, clientul itereaza printre toti identificatorii
+setati la un moment dat.
+    Daca este setat identificatorul socketului ce asigura legatura cu serverul 
+se verifica daca se primeste un mesaj de iesire a acestuia. In acest caz, 
+clientul inceteaza procesele pe care le avea deschise si iese din sistem. Aici
+se trateaza si cazul in care serverul a iesit neintentionat.
+    Pentru identificatorul stdin-ului, clientul citeste comanda si daca este 
+valida, verifica daca trebuie sa o trimita serverului.
+
+    In cazul comenzii infoclients, acesta asteapta de la server, intr-un singur
+mesaj, sub forma unei liste text toti clientii si informatiile despre ei. Daca
+un client exista deja i se va updata doar ip-ul si portul, dar lista de 
+fisiere partajate a acestuia ramane neschimbata (aici putea fi resetata, dar 
+cred ca este natural sa ramana asa, ca sa nu fie nevoit sa apeleze getshare
+dupa fiecare infoclient. Evident, daca fisierele nu mai sunt partajate intre 
+timp, va fi afisat un mesaj de eroare.
+
+    Pentru getshare, trimite serverului numele clientului pentru care vrea sa 
+afle fisierele partajate si le primeste sub forma unei liste text si isi 
+actualizeaza informatia. Se trateaza cazurile de eroare.
+
+    Pentru share, trimite serverului numele fisierului, doar daca acesta exista
+pe disc si isi actualizeaza lista proprie.
+    
+    Unshare este analog comenzii anterioare.
+    
+    Pentru getshare, verifica sa nu aiba bufferul de primire de fisiere plin.
+Daca este ok, atunci verifica daca acest fisier exista si asteapta confirmarea 
+si de la cel pe care vrea sa il ia (la fel, daca acesta nu are deja in bufferul
+de send 3 fisiere). In aceste cazuri am introdus niste coduri de eroare care 
+sa arate indisponibilitatea. Daca nu este niciun caz de eroare creeaza un nou
+socket si se conecteaza la client folosind ip-ul si portul pe care le stie. 
+Ii transmite numele fisierului si numele sau dupa care creeza un fisier cu acel
+nume pe disc. Dupa aceasta, adauga in bufferul de primiri informatiile legate
+de identificatorul socketului creat, numele fisierului, cat a fost primit din el
+care e dimensiunea totala si altele, folosind structura ProcessFile.
+
+    In cazul comenzii history, doar afiseaza continutul vectorului in care
+retine ce fisiere a transmis complet.
+
+    La introducerea comenzii quit, verifica daca mai are fisiere de transmis, si
+in caz afirmativ, apeleaza processFileToSend() pana cand se goleste bufferul.
+Daca are fisiere de primit, doar atentioneaza utilizatorul, dupa care inchide 
+socketii si iese.
+
+    Daca primeste pe socketul de listen, inseamna ca un client a apelat getshare 
+pe un fisier de al sau. In acest caz, primeste informatiile oferite (prezentate 
+la getshare) si adauga in bufferul de send o intrare cu toate informatiile 
+legate de fisierul pe care trebuie sa il trimita.
+
+    Daca este cazul unui alt socket, inseamna ca primeste fragmete din fisierele
+pe care trebuie sa le receptioneze. Se uita in buffer pentru ce fisier primeste 
+si apeleaza processFileToRecv().
+    
+    La finalul unei iteratii din bucla while(1), trimite fragmente din fisierele
+din bufferul de send, cate unul pentru fiecare client (maxim 3), daca este 
+cazul. 
+    
+    Functiile processFileToRecv() si processFileToSend() iau informatiile 
+din bufferele de send/receive si le updateaza corespunzator. Mai intai se 
+trimite / primeste dimensiunea bufferului ce va urma sa fie transmis (poate 
+fi mai putin de 1024). Apoi se scrie in fisier in cazul lui recv. Daca 
+dimensiunea procesata a ajuns la dimensiunea totala, se inchid fisierele, 
+socketii si in cazul lui recv se afiseaza Succes Nume, iar la sender se
+adauga in istorie aceasta intrare.
+    
+********************************************************************************
+
+    (!!!)   Alte detalii referitoare la implementarea temei se gasesc in 
+            fisierele sursa.
+
+********************************************************************************
+    Nota personala:
+    
+        De departe cea mai mare tema pe care am avut-o pana acum (1700 de 
+    linii). O tema foarte "practica", dar care a necesitat un efort destul de 
+    mare. Oricum, a meritat, pentru ca in final am reusit sa realizez toate
+    functionalitatile din enunt (parte cu primirea si transmiterea fisierelor
+    in timp ce clientul poate sa faca si altceva). Ca o observatie, nu cred ca 
+    se poate testa tema prin redirectarea unui fisier cu comenzi, ci trebuie 
+    introduse pe rand de la consola.
+    	Imi pare rau ca nu m-am incadrat in 80 de caractere la unele linii, dar
+    daca as fi facut asta ar fi fost greu de inteles codul.
+    	Daca intapinati vreo problema in timpul corectarii, va rog sa ma 
+    contactati: andreiursache94@gmail.com
+    
+    Andrei Ursache
+
